@@ -1,4 +1,4 @@
-class Script {
+class StoreSession {
   constructor(config) {
     config = { ...config };
     this._name = config.name || 'script';
@@ -11,4 +11,4 @@ class Script {
   }
 }
 
-module.exports = Script;
+module.exports = StoreSession;
