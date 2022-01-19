@@ -1,0 +1,67 @@
+{
+  "name": "@ladjs/store-sessions",
+  "description": "Store/manage user sessions in the background for Lad",
+  "version": "0.0.1",
+  "author": "Taylor Schley <taylorschley@me.com> (https://github.com/shadowgate15)",
+  "bugs": {
+    "url": "https://github.com/ladjs/store-sessions/issues",
+    "email": "taylorschley@me.com"
+  },
+  "contributors": [
+    "Taylor Schley <taylorschley@me.com> (https://github.com/shadowgate15)"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@commitlint/cli": "latest",
+    "@commitlint/config-conventional": "latest",
+    "ava": "latest",
+    "codecov": "latest",
+    "cross-env": "latest",
+    "eslint": "latest",
+    "eslint-config-xo-lass": "latest",
+    "fixpack": "latest",
+    "husky": "latest",
+    "lint-staged": "latest",
+    "nyc": "latest",
+    "remark-cli": "latest",
+    "remark-preset-github": "latest",
+    "xo": "latest"
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "homepage": "https://github.com/ladjs/store-sessions",
+  "keywords": [
+    "lad",
+    "ladjs",
+    "mongoose",
+    "redis",
+    "session",
+    "sessions"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ladjs/store-sessions"
+  },
+  "scripts": {
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
+    "lint": "yarn run lint:js && yarn run lint:md",
+    "lint:js": "xo",
+    "lint:md": "remark . -qfo",
+    "pretest": "yarn run lint",
+    "test": "cross-env NODE_ENV=test ava",
+    "test-coverage": "cross-env NODE_ENV=test nyc yarn run test"
+  },
+  "xo": {
+    "prettier": true,
+    "space": true,
+    "extends": [
+      "xo-lass"
+    ]
+  }
+}
