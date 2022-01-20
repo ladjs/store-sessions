@@ -87,9 +87,11 @@ class StoreSessions {
           [this.config.fields.lastActivity]: new Date()
         });
       } else {
-        ctx.state.user[this.config.fields.sessions][idx].ip = ctx.ip;
-        ctx.state.user[this.config.fields.sessions][idx].lastActivity =
-          new Date();
+        const session = ctx.state.user[this.config.fields.sessions][idx];
+        session[this.config.fields.ip] = ctx.ip;
+        session[this.config.fields.lastActivity] = new Date();
+
+        ctx.state.user[this.config.fields.sessions][idx] = session;
       }
     } else {
       ctx.state.user[this.config.fields.sessions] = [
