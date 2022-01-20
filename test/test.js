@@ -1,27 +1,31 @@
 const test = require('ava');
 
-const Script = require('..');
-
-test.beforeEach((t) => {
-  const script = new Script({});
-  Object.assign(t.context, { script });
-});
+const StoreSessions = require('../');
 
 test('returns itself', (t) => {
-  t.true(t.context.script instanceof Script);
+  t.true(new StoreSessions() instanceof StoreSessions);
 });
 
-test('sets a config object', (t) => {
-  const script = new Script(false);
-  t.true(script instanceof Script);
+test('throws if schemaName is not a string', (t) => {
+  t.throws(() => new StoreSessions({ schemaName: {} }), {
+    message: `schemaName must be a String`
+  });
 });
 
-test('renders name', (t) => {
-  const { script } = t.context;
-  t.is(script.renderName(), 'script');
+const fieldsConfigMacro = test.macro({
+  exec(t, propName) {
+    t.throws(() => new StoreSessions({ fields: { [propName]: {} } }), {
+      message: `${propName} must be a String`
+    });
+  },
+  title(providedTitle, propName) {
+    return providedTitle
+      ? providedTitle
+      : `throws if ${propName} is not a string`;
+  }
 });
 
-test('sets a default name', (t) => {
-  const { script } = t.context;
-  t.is(script._name, 'script');
-});
+test(fieldsConfigMacro, 'sessions');
+test(fieldsConfigMacro, 'ip');
+test(fieldsConfigMacro, 'lastActivity');
+test(fieldsConfigMacro, 'sid');

@@ -10,7 +10,11 @@
   "contributors": [
     "Taylor Schley <taylorschley@me.com> (https://github.com/shadowgate15)"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "debug": "^4.3.3",
+    "is-string-and-not-blank": "^0.0.2",
+    "mongoose": "^6.1.7"
+  },
   "devDependencies": {
     "@commitlint/cli": "latest",
     "@commitlint/config-conventional": "latest",
@@ -41,6 +45,9 @@
   ],
   "license": "MIT",
   "main": "index.js",
+  "peerDependencies": {
+    "koa-generic-session": "^2.3.0"
+  },
   "publishConfig": {
     "access": "public"
   },
