@@ -1,11 +1,12 @@
 const isSANB = require('is-string-and-not-blank');
 const debug = require('debug')('@ladjs/store-sessions');
-const mongoose = require('mongoose');
 
 class StoreSessions {
   constructor(config = {}) {
     this.config = {
-      schemaName: 'Session',
+      logger: console,
+      // schema to be used in sesssions field
+      schema: false,
       ...config,
       fields: {
         sessions: 'sessions',
@@ -24,9 +25,8 @@ class StoreSessions {
       if (!isSANB(this.config.fields[prop]))
         throw new Error(`${prop} must be a String`);
 
-    // validate schemaName
-    if (!isSANB(this.config.schemaName))
-      throw new Error('schemaName must be a String');
+    if (!this.config.schema && typeof this.config.schema !== 'object')
+      throw new Error('schema must be a Mongoose Schema');
 
     this.middleware = this.middleware.bind(this);
     this.plugin = this.plugin.bind(this);
@@ -101,19 +101,14 @@ class StoreSessions {
       ];
     }
 
-    ctx.state.user = ctx.state.user.save();
+    ctx.state.user = await ctx.state.user.save();
 
     return next();
   }
 
   async plugin(schema) {
     const obj = {};
-    obj[this.config.fields.sessions] = [
-      {
-        type: mongoose.ObjectId,
-        ref: this.config.schemaName
-      }
-    ];
+    obj[this.config.fields.sessions] = [this.config.schema];
     schema.add(obj);
     return schema;
   }

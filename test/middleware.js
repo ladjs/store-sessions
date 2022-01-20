@@ -1,4 +1,5 @@
 const test = require('ava');
+const mongoose = require('mongoose');
 
 const StoreSessions = require('../');
 
@@ -8,6 +9,7 @@ const baseUser = () => ({
     return this;
   }
 });
+const baseSchema = new mongoose.Schema();
 const baseCtx = () => ({
   throw: (err) => {
     throw err;
@@ -34,7 +36,7 @@ const baseCtx = () => ({
 });
 
 test('throws if no ctx.session', async (t) => {
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
   await t.throwsAsync(
     () => storeSessions.middleware({ ...baseCtx(), session: null }, next),
     {
@@ -44,7 +46,7 @@ test('throws if no ctx.session', async (t) => {
 });
 
 test('throws if no ctx.saveSession', async (t) => {
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
   await t.throwsAsync(
     () => storeSessions.middleware({ ...baseCtx(), saveSession: null }, next),
     {
@@ -55,7 +57,7 @@ test('throws if no ctx.saveSession', async (t) => {
 });
 
 test('throws if ctx.saveSession is not a function', async (t) => {
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
   await t.throwsAsync(
     () =>
       storeSessions.middleware(
@@ -71,7 +73,7 @@ test('throws if ctx.saveSession is not a function', async (t) => {
 
 const unAuthedMacro = test.macro(async (t, input) => {
   const ctx = { ...baseCtx(), ...input };
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
 
   await storeSessions.middleware(ctx, next);
   t.is(ctx.state.user.sessions, undefined);
@@ -93,7 +95,7 @@ test('does nothing if no sessionId', unAuthedMacro, { sessionId: null });
 
 test('add sessions to user if no sessions property', async (t) => {
   const ctx = { ...baseCtx(), sessionId: '42' };
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
 
   await storeSessions.middleware(ctx, next);
 
@@ -109,7 +111,7 @@ test('add sessions to user if sessions is array but no session', async (t) => {
       user: { ...baseUser(), sessions: [] }
     }
   };
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
 
   await storeSessions.middleware(ctx, next);
 
@@ -128,7 +130,7 @@ test('update sessions in user if session exists', async (t) => {
       }
     }
   };
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
 
   await storeSessions.middleware(ctx, next);
 
@@ -138,7 +140,7 @@ test('update sessions in user if session exists', async (t) => {
 
 test('adds invalidateOtherSessions helper function', async (t) => {
   const ctx = { ...baseCtx(), sessionId: '42' };
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
 
   await storeSessions.middleware(ctx, next);
 
@@ -151,7 +153,7 @@ test('invalidateOtherSessions > does nothing if there is no sessions array', asy
     sessionId: '42',
     state: { user: { ...baseUser(), sessions: [] } }
   };
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
 
   await storeSessions.middleware(ctx, next);
 
@@ -176,7 +178,7 @@ test('invalidateOtherSessions > removes other sessions if there are other sessio
       }
     }
   };
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
 
   await storeSessions.middleware(ctx, next);
 

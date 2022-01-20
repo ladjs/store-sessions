@@ -12,8 +12,7 @@
   ],
   "dependencies": {
     "debug": "^4.3.3",
-    "is-string-and-not-blank": "^0.0.2",
-    "mongoose": "^6.1.7"
+    "is-string-and-not-blank": "^0.0.2"
   },
   "devDependencies": {
     "@commitlint/cli": "latest",
@@ -26,6 +25,7 @@
     "fixpack": "latest",
     "husky": "latest",
     "lint-staged": "latest",
+    "mongoose": "^6.1.7",
     "nyc": "latest",
     "remark-cli": "latest",
     "remark-preset-github": "latest",

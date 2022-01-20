@@ -5,7 +5,7 @@ const StoreSessions = require('../');
 
 test('creates a plugin with schema', (t) => {
   const schema = new mongoose.Schema();
-  const storeSessions = new StoreSessions();
+  const storeSessions = new StoreSessions({ schema });
 
   schema.plugin(storeSessions.plugin);
 
