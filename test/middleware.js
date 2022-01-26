@@ -311,7 +311,7 @@ test('invalidateOtherSessions > calls next() if user is no longer logged in', as
 });
 
 test('logOut > removes previous session from user', async (t) => {
-  t.plan(4);
+  t.plan(5);
 
   const ctx = {
     ...baseCtx(),
@@ -324,6 +324,7 @@ test('logOut > removes previous session from user', async (t) => {
     },
     logOut: async () => t.pass()
   };
+  ctx.sessionStore.destroy = async () => t.pass();
   const storeSessions = new StoreSessions({ schema: baseSchema });
 
   await storeSessions.middleware(ctx, next);

@@ -67,7 +67,9 @@ class StoreSessions {
           fields.sessions
         ].filter((session) => !(session.sid === ctx.sessionId));
 
-        ctx.state.user = ctx.state.user.save();
+        ctx.state.user = await ctx.state.user.save();
+
+        await ctx.sessionStore.destroy(ctx.sessionId);
       }
 
       return _logOut();
