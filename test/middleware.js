@@ -28,6 +28,7 @@ const baseCtx = () => ({
     passport: { user: '61e1ea20959b644333b9aa98' }
   },
   saveSession: () => {},
+  logOut: () => {},
   state: {
     user: baseUser()
   },
@@ -67,6 +68,27 @@ test('throws if ctx.saveSession is not a function', async (t) => {
     {
       message:
         'Please use koa-generic-session v2.0.3+ which exposes a `ctx.saveSession()` method'
+    }
+  );
+});
+
+test('throws if no ctx.logOut', async (t) => {
+  const storeSessions = new StoreSessions({ schema: baseSchema });
+  await t.throwsAsync(
+    () => storeSessions.middleware({ ...baseCtx(), logOut: null }, next),
+    {
+      message: 'Please use koa-passport which exposes a `ctx.logOut` method'
+    }
+  );
+});
+
+test('throws if ctx.logOut is not a function', async (t) => {
+  const storeSessions = new StoreSessions({ schema: baseSchema });
+  await t.throwsAsync(
+    () =>
+      storeSessions.middleware({ ...baseCtx(), session: {}, logOut: {} }, next),
+    {
+      message: 'Please use koa-passport which exposes a `ctx.logOut` method'
     }
   );
 });
@@ -151,7 +173,7 @@ test('invalidateOtherSessions > does nothing if there is no sessions array', asy
   const ctx = {
     ...baseCtx(),
     sessionId: '42',
-    state: { user: { ...baseUser(), sessions: [] } }
+    state: { user: { ...baseUser(), sessions: null } }
   };
   const storeSessions = new StoreSessions({ schema: baseSchema });
 
@@ -190,4 +212,60 @@ test('invalidateOtherSessions > removes other sessions if there are other sessio
 
   t.is(ctx.state.user.sessions.length, 1);
   t.like(ctx.state.user.sessions[0], { sid: '42', ip: '127.0.0.1' });
+});
+
+test('invalidateOtherSessions > calls next() if user is no longer logged in', async (t) => {
+  t.plan(8);
+
+  const ctx = {
+    ...baseCtx(),
+    sessionId: '42',
+    sessionStore: { destroy: () => {} },
+    state: {
+      user: {
+        ...baseUser(),
+        sessions: [{ last_activity: new Date(), ip: '127.0.0.3', sid: '15' }]
+      }
+    }
+  };
+  const storeSessions = new StoreSessions({ schema: baseSchema });
+
+  await storeSessions.middleware(ctx, () => t.pass());
+
+  t.is(ctx.state.user.sessions.length, 2);
+  t.like(ctx.state.user.sessions[0], { sid: '15', ip: '127.0.0.3' });
+  t.like(ctx.state.user.sessions[1], { sid: '42', ip: '127.0.0.1' });
+
+  ctx.isAuthenticated = () => false;
+  await ctx.invalidateOtherSessions();
+
+  t.is(ctx.state.user.sessions.length, 2);
+  t.like(ctx.state.user.sessions[0], { sid: '15', ip: '127.0.0.3' });
+  t.like(ctx.state.user.sessions[1], { sid: '42', ip: '127.0.0.1' });
+});
+
+test('logOut > removes previous session from user', async (t) => {
+  t.plan(4);
+
+  const ctx = {
+    ...baseCtx(),
+    sessionId: '42',
+    state: {
+      user: {
+        ...baseUser(),
+        sessions: [{ last_activity: new Date(), ip: '127.0.0.1', sid: '42' }]
+      }
+    },
+    logOut: async () => t.pass()
+  };
+  const storeSessions = new StoreSessions({ schema: baseSchema });
+
+  await storeSessions.middleware(ctx, next);
+
+  t.is(ctx.state.user.sessions.length, 1);
+  t.like(ctx.state.user.sessions[0], { sid: '42', ip: '127.0.0.1' });
+
+  await ctx.logOut();
+
+  t.is(ctx.state.user.sessions.length, 0);
 });

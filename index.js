@@ -38,6 +38,10 @@ class StoreSessions {
       throw new Error(
         'Please use koa-generic-session v2.0.3+ which exposes a `ctx.saveSession()` method'
       );
+    if (typeof ctx.logOut !== 'function')
+      throw new Error(
+        'Please use koa-passport which exposes a `ctx.logOut` method'
+      );
 
     // return early if the user is not authenticated
     if (
@@ -49,9 +53,44 @@ class StoreSessions {
     )
       return next();
 
+    const { fields } = this.config;
+
+    // overwrite ctx.logout to remove session on logout
+    const _logOut = ctx.logOut;
+    ctx.logOut = async function () {
+      debug(
+        `removing session ${ctx.sessionId} on logout for ${ctx.state.user.id}`
+      );
+      /* istanbul ignore else */
+      if (Array.isArray(ctx.state.user[fields.sessions])) {
+        ctx.state.user[fields.sessions] = ctx.state.user[
+          fields.sessions
+        ].filter((session) => !(session.sid === ctx.sessionId));
+
+        ctx.state.user = ctx.state.user.save();
+      }
+
+      return _logOut();
+    };
+
+    ctx.logout = ctx.logOut;
+
     // add helper function to ctx
     // will be able to invalidate all other sessions
     ctx.invalidateOtherSessions = async () => {
+      // return early if the user is not authenticated
+      if (
+        typeof ctx.state.user !== 'object' ||
+        typeof ctx.state.user.save !== 'function' ||
+        typeof ctx.isAuthenticated !== 'function' ||
+        !ctx.isAuthenticated()
+      )
+        return next();
+
+      debug(
+        `invalidating all other sessions except ${ctx.sessionId} from user ${ctx.state.user.id}`
+      );
+      /* istanbul ignore else */
       if (Array.isArray(ctx.state.user[this.config.fields.sessions])) {
         const newSessions = [];
 
