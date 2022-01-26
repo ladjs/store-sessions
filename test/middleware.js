@@ -336,3 +336,32 @@ test('logOut > removes previous session from user', async (t) => {
 
   t.is(ctx.state.user.sessions.length, 0);
 });
+
+test('logOut > calls next() if user is no longer logged in', async (t) => {
+  t.plan(6);
+
+  const ctx = {
+    ...baseCtx(),
+    sessionId: '42',
+    state: {
+      user: {
+        ...baseUser(),
+        sessions: [{ last_activity: new Date(), ip: '127.0.0.1', sid: '42' }]
+      }
+    },
+    logOut: async () => t.fail()
+  };
+  ctx.sessionStore.destroy = async () => t.pass();
+  const storeSessions = new StoreSessions({ schema: baseSchema });
+
+  await storeSessions.middleware(ctx, () => t.pass());
+
+  t.is(ctx.state.user.sessions.length, 1);
+  t.like(ctx.state.user.sessions[0], { sid: '42', ip: '127.0.0.1' });
+
+  ctx.isAuthenticated = () => false;
+  await ctx.logOut();
+
+  t.is(ctx.state.user.sessions.length, 1);
+  t.like(ctx.state.user.sessions[0], { sid: '42', ip: '127.0.0.1' });
+});

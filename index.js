@@ -43,21 +43,20 @@ class StoreSessions {
         'Please use koa-passport which exposes a `ctx.logOut` method'
       );
 
-    // return early if the user is not authenticated
-    if (
-      typeof ctx.state.user !== 'object' ||
-      typeof ctx.state.user.save !== 'function' ||
-      typeof ctx.isAuthenticated !== 'function' ||
-      !ctx.isAuthenticated() ||
-      !ctx.sessionId
-    )
-      return next();
-
     const { fields } = this.config;
 
     // overwrite ctx.logout to remove session on logout
     const _logOut = ctx.logOut;
     ctx.logOut = async function () {
+      // return early if the user is not authenticated
+      if (
+        typeof ctx.state.user !== 'object' ||
+        typeof ctx.state.user.save !== 'function' ||
+        typeof ctx.isAuthenticated !== 'function' ||
+        !ctx.isAuthenticated()
+      )
+        return next();
+
       debug(
         `removing session ${ctx.sessionId} on logout for ${ctx.state.user.id}`
       );
@@ -114,6 +113,16 @@ class StoreSessions {
         ctx.state.user = await ctx.state.user.save();
       }
     };
+
+    // return early if the user is not authenticated
+    if (
+      typeof ctx.state.user !== 'object' ||
+      typeof ctx.state.user.save !== 'function' ||
+      typeof ctx.isAuthenticated !== 'function' ||
+      !ctx.isAuthenticated() ||
+      !ctx.sessionId
+    )
+      return next();
 
     debug(`storing sessionId ${ctx.sessionId} for user ${ctx.state.user.id}`);
     if (Array.isArray(ctx.state.user[fields.sessions])) {
