@@ -91,13 +91,13 @@ class StoreSessions {
         `invalidating all other sessions except ${ctx.sessionId} from user ${ctx.state.user.id}`
       );
       /* istanbul ignore else */
-      if (Array.isArray(ctx.state.user[this.config.fields.sessions])) {
+      if (Array.isArray(ctx.state.user[fields.sessions])) {
         const newSessions = [];
 
         await Promise.all(
-          ctx.state.user[this.config.fields.sessions].map(async (session) => {
+          ctx.state.user[fields.sessions].map(async (session) => {
             // move on if this is the current session
-            if (session[this.config.fields.sid] === ctx.sessionId) {
+            if (session[fields.sid] === ctx.sessionId) {
               newSessions.push(session);
               return;
             }
@@ -107,37 +107,59 @@ class StoreSessions {
           })
         );
 
-        ctx.state.user[this.config.fields.sessions] = newSessions;
+        ctx.state.user[fields.sessions] = newSessions;
 
         ctx.state.user = await ctx.state.user.save();
       }
     };
 
     debug(`storing sessionId ${ctx.sessionId} for user ${ctx.state.user.id}`);
-    if (Array.isArray(ctx.state.user[this.config.fields.sessions])) {
-      const idx = ctx.state.user[this.config.fields.sessions].findIndex(
-        (s) => s.sid === ctx.sessionId
+    if (Array.isArray(ctx.state.user[fields.sessions])) {
+      const newSessions = [];
+      let found = false;
+
+      await Promise.all(
+        ctx.state.user[fields.sessions].map(async (session) => {
+          if (session.sid === ctx.sessionId) {
+            found = true;
+            session[fields.ip] = ctx.ip;
+            session[fields.lastActivity] = new Date();
+            newSessions.push(session);
+            return;
+          }
+
+          try {
+            const sess = await ctx.sessionStore.get(session.sid);
+
+            if (sess) {
+              newSessions.push(session);
+            }
+          } catch (err) {
+            this.config.logger.error(err);
+            // still saving this session since something went wrong with getting the session
+            // if it didn't exist we would have gotten 'null'
+            newSessions.push(session);
+          }
+        })
       );
 
-      if (idx === -1) {
-        ctx.state.user[this.config.fields.sessions].push({
-          [this.config.fields.ip]: ctx.ip,
-          [this.config.fields.sid]: ctx.sessionId,
-          [this.config.fields.lastActivity]: new Date()
+      // if we didn't find the sessionId already
+      // then add it to the end of the new array
+      if (!found) {
+        newSessions.push({
+          [fields.ip]: ctx.ip,
+          [fields.sid]: ctx.sessionId,
+          [fields.lastActivity]: new Date()
         });
-      } else {
-        const session = ctx.state.user[this.config.fields.sessions][idx];
-        session[this.config.fields.ip] = ctx.ip;
-        session[this.config.fields.lastActivity] = new Date();
-
-        ctx.state.user[this.config.fields.sessions][idx] = session;
       }
+
+      ctx.state.user[fields.sessions] = newSessions;
     } else {
-      ctx.state.user[this.config.fields.sessions] = [
+      ctx.state.user[fields.sessions] = [
         {
-          [this.config.fields.ip]: ctx.ip,
-          [this.config.fields.sid]: ctx.sessionId,
-          [this.config.fields.lastActivity]: new Date()
+          [fields.ip]: ctx.ip,
+          [fields.sid]: ctx.sessionId,
+          [fields.lastActivity]: new Date()
         }
       ];
     }

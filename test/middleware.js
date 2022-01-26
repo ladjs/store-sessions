@@ -28,6 +28,7 @@ const baseCtx = () => ({
     passport: { user: '61e1ea20959b644333b9aa98' }
   },
   saveSession: () => {},
+  sessionStore: { destroy: () => {}, get: () => true },
   logOut: () => {},
   state: {
     user: baseUser()
@@ -160,6 +161,73 @@ test('update sessions in user if session exists', async (t) => {
   t.like(ctx.state.user.sessions[0], { sid: '42', ip: '127.0.0.1' });
 });
 
+test('adds session to existing array of sessions', async (t) => {
+  const ctx = {
+    ...baseCtx(),
+    sessionId: '42',
+    sessionStore: { destroy: () => {}, get: () => true },
+    state: {
+      user: {
+        ...baseUser(),
+        sessions: [{ last_activity: new Date(), ip: '127.0.0.3', sid: '15' }]
+      }
+    }
+  };
+  const storeSessions = new StoreSessions({ schema: baseSchema });
+
+  await storeSessions.middleware(ctx, next);
+
+  t.is(ctx.state.user.sessions.length, 2);
+  t.like(ctx.state.user.sessions[0], { sid: '15', ip: '127.0.0.3' });
+  t.like(ctx.state.user.sessions[1], { sid: '42', ip: '127.0.0.1' });
+});
+
+test('removes session if sessionId is no longer valid', async (t) => {
+  const ctx = {
+    ...baseCtx(),
+    sessionId: '42',
+    sessionStore: { destroy: () => {}, get: (sid) => sid !== '15' },
+    state: {
+      user: {
+        ...baseUser(),
+        sessions: [{ last_activity: new Date(), ip: '127.0.0.3', sid: '15' }]
+      }
+    }
+  };
+  const storeSessions = new StoreSessions({ schema: baseSchema });
+
+  await storeSessions.middleware(ctx, next);
+
+  t.is(ctx.state.user.sessions.length, 1);
+  t.like(ctx.state.user.sessions[0], { sid: '42', ip: '127.0.0.1' });
+});
+
+test('does not remove session if sessionStore throws error', async (t) => {
+  const ctx = {
+    ...baseCtx(),
+    sessionId: '42',
+    sessionStore: {
+      destroy: () => {},
+      get: () => {
+        throw new Error('Fake Error');
+      }
+    },
+    state: {
+      user: {
+        ...baseUser(),
+        sessions: [{ last_activity: new Date(), ip: '127.0.0.3', sid: '15' }]
+      }
+    }
+  };
+  const storeSessions = new StoreSessions({ schema: baseSchema });
+
+  await storeSessions.middleware(ctx, next);
+
+  t.is(ctx.state.user.sessions.length, 2);
+  t.like(ctx.state.user.sessions[0], { sid: '15', ip: '127.0.0.3' });
+  t.like(ctx.state.user.sessions[1], { sid: '42', ip: '127.0.0.1' });
+});
+
 test('adds invalidateOtherSessions helper function', async (t) => {
   const ctx = { ...baseCtx(), sessionId: '42' };
   const storeSessions = new StoreSessions({ schema: baseSchema });
@@ -192,7 +260,6 @@ test('invalidateOtherSessions > removes other sessions if there are other sessio
   const ctx = {
     ...baseCtx(),
     sessionId: '42',
-    sessionStore: { destroy: () => {} },
     state: {
       user: {
         ...baseUser(),
@@ -220,7 +287,6 @@ test('invalidateOtherSessions > calls next() if user is no longer logged in', as
   const ctx = {
     ...baseCtx(),
     sessionId: '42',
-    sessionStore: { destroy: () => {} },
     state: {
       user: {
         ...baseUser(),
