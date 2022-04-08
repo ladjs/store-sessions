@@ -11,7 +11,7 @@
     "Taylor Schley <taylorschley@me.com> (https://github.com/shadowgate15)"
   ],
   "dependencies": {
-    "debug": "^4.3.3",
+    "debug": "^4.3.4",
     "is-string-and-not-blank": "^0.0.2"
   },
   "devDependencies": {
