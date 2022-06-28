@@ -62,13 +62,19 @@ class StoreSessions {
       );
       /* istanbul ignore else */
       if (Array.isArray(ctx.state.user[fields.sessions])) {
-        ctx.state.user[fields.sessions] = ctx.state.user[
-          fields.sessions
-        ].filter((session) => !(session.sid === ctx.sessionId));
+        const idx = ctx.state.user[fields.sessions].findIndex(
+          (session) => session.sid === ctx.sessionId
+        );
 
-        ctx.state.user = await ctx.state.user.save();
+        if (idx > -1) {
+          ctx.state.user[fields.sessions].splice(idx, 1);
 
-        await ctx.sessionStore.destroy(ctx.sessionId);
+          ctx.state.user = await ctx.state.user.save({
+            validateModifiedOnly: true
+          });
+
+          await ctx.sessionStore.destroy(ctx.sessionId);
+        }
       }
 
       return _logOut();
@@ -110,7 +116,9 @@ class StoreSessions {
 
         ctx.state.user[fields.sessions] = newSessions;
 
-        ctx.state.user = await ctx.state.user.save();
+        ctx.state.user = await ctx.state.user.save({
+          validateModifiedOnly: true
+        });
       }
     };
 
@@ -126,45 +134,34 @@ class StoreSessions {
 
     debug(`storing sessionId ${ctx.sessionId} for user ${ctx.state.user.id}`);
     if (Array.isArray(ctx.state.user[fields.sessions])) {
-      const newSessions = [];
-      let found = false;
-
-      await Promise.all(
-        ctx.state.user[fields.sessions].map(async (session) => {
-          if (session.sid === ctx.sessionId) {
-            found = true;
-            session[fields.ip] = ctx.ip;
-            session[fields.lastActivity] = new Date();
-            newSessions.push(session);
-            return;
-          }
-
-          try {
-            const sess = await ctx.sessionStore.get(session.sid);
-
-            if (sess) {
-              newSessions.push(session);
-            }
-          } catch (err) {
-            this.config.logger.error(err);
-            // still saving this session since something went wrong with getting the session
-            // if it didn't exist we would have gotten 'null'
-            newSessions.push(session);
-          }
-        })
+      const idx = ctx.state.user[fields.sessions].findIndex(
+        (session) => ctx.sessionId === session[fields.sid]
       );
 
-      // if we didn't find the sessionId already
-      // then add it to the end of the new array
-      if (!found) {
-        newSessions.push({
+      if (idx > -1) {
+        const session = ctx.state.user[fields.sessions][idx];
+
+        try {
+          const sess = await ctx.sessionStore.get(session[fields.sid]);
+
+          if (sess) {
+            ctx.state.user[fields.sessions].push(session);
+          }
+        } catch (err) {
+          this.config.logger.error(err);
+          // still saving this session since something went wrong with getting the session
+          // if it didn't exist we would have gotten 'null'
+          ctx.state.user[fields.sessions].push(session);
+        }
+      } else {
+        // if we didn't find the sessionId already
+        // then add it to the end of the new array
+        ctx.state.user[fields.sessions].push({
           [fields.ip]: ctx.ip,
           [fields.sid]: ctx.sessionId,
           [fields.lastActivity]: new Date()
         });
       }
-
-      ctx.state.user[fields.sessions] = newSessions;
     } else {
       ctx.state.user[fields.sessions] = [
         {
@@ -175,7 +172,7 @@ class StoreSessions {
       ];
     }
 
-    ctx.state.user = await ctx.state.user.save();
+    ctx.state.user = await ctx.state.user.save({ validateModifiedOnly: true });
 
     return next();
   }
